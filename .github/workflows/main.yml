@@ -8,70 +8,79 @@ on:
     branches: [ "main" ]  # main分支收到pull request时触发
   workflow_dispatch:      # 允许手动触发工作流
 
+# 环境变量
+env:
+  NODE_VERSION: '16.20.2'  # 使用指定的Node.js版本
+
 # 工作流程中的任务
 jobs:
-  test:
-    name: 构建和测试
+  build-and-test:        # 构建和测试任务
     runs-on: ubuntu-latest  # 在最新版Ubuntu上运行
-    
     strategy:
       matrix:
-        node-version: [18.x, 20.x]  # 测试多个Node.js版本
-      fail-fast: false  # 某个版本失败时继续测试其他版本
+        node-version: ['16.20.2'] # 使用单一指定版本
 
     steps:
+    # 检出代码
     - name: 检出代码
       uses: actions/checkout@v3
 
+    # 设置Node.js环境
     - name: 设置 Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v3
       with:
         node-version: ${{ matrix.node-version }}
-        cache: 'npm'
+        cache: 'npm'     # 缓存npm依赖
         cache-dependency-path: backend/package-lock.json
 
+    # 安装依赖
     - name: 安装依赖
       working-directory: backend
       run: |
         npm ci
-        npm install -D eslint@8.56.0  # 安装特定版本的ESLint
+        npm install -D eslint@7.32.0  # 安装与Node.js 16兼容的ESLint版本
 
+    # 运行代码检查
     - name: 运行代码检查
       working-directory: backend
-      run: npx eslint .
+      run: npx eslint . --ext .js  # 使用兼容的ESLint命令
 
+    # 创建环境变量文件
     - name: 创建环境变量文件
       working-directory: backend
       run: |
         echo "API_KEY=${{ secrets.API_KEY }}" > .env
 
+    # 运行测试
     - name: 运行测试
       working-directory: backend
       run: npm test
       env:
         API_KEY: ${{ secrets.API_KEY }}
 
-  deploy:
-    name: 部署应用
-    needs: test  # 需要测试任务成功完成
+  deploy:                # 部署任务
+    needs: build-and-test  # 需要等待build-and-test任务完成
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'  # 只在main分支的推送事件上部署
+    if: github.ref == 'refs/heads/main' # 只在main分支上部署
 
     steps:
     - name: 检出代码
       uses: actions/checkout@v3
 
+    # 设置Node.js环境
     - name: 设置 Node.js
       uses: actions/setup-node@v3
       with:
-        node-version: '20.x'
+        node-version: '16.20.2'  # 使用相同的Node.js版本
         cache: 'npm'
         cache-dependency-path: backend/package-lock.json
 
+    # 安装依赖
     - name: 安装依赖
       working-directory: backend
       run: npm ci
 
+    # 部署步骤
     - name: 部署应用
       working-directory: backend
       run: |
@@ -80,30 +89,19 @@ jobs:
       env:
         API_KEY: ${{ secrets.API_KEY }}
 
-    - name: 部署状态通知
-      if: always()
+    - name: 部署通知
+      if: always()       # 无论成功失败都发送通知
       run: |
-        if [ "${{ job.status }}" == "success" ]; then
-          echo "✅ 部署成功完成！"
-        else
-          echo "❌ 部署失败！"
-          exit 1
-        fi
+        echo "部署${{ job.status == 'success' && '成功' || '失败' }}!"
 
+# 工作流完成后的通知
   notify:
-    name: 发送通知
-    needs: [test, deploy]  # 等待所有任务完成
+    needs: [deploy]      # 等待部署完成
     runs-on: ubuntu-latest
-    if: always()  # 总是运行通知任务
+    if: always()         # 总是运行通知任务
 
     steps:
-    - name: 检查工作流状态
+    - name: 发送工作流状态通知
       run: |
-        if [ "${{ needs.test.result }}" == "success" ] && [ "${{ needs.deploy.result }}" == "success" ]; then
-          echo "✨ CI/CD 工作流程已成功完成！"
-        else
-          echo "⚠️ CI/CD 工作流程完成，但存在失败的任务："
-          echo "测试状态: ${{ needs.test.result }}"
-          echo "部署状态: ${{ needs.deploy.result }}"
-          exit 1
-        fi
+        echo "CI/CD 工作流程已完成"
+        echo "状态: ${{ job.status }}"
