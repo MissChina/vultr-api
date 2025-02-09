@@ -62,7 +62,7 @@ app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-app.listen(port, () => {
+app.listen(port, '0.0.0.0', () => {
     console.log(`服务器运行在 http://localhost:${port}`);
     console.log('API密钥已配置');
 });
