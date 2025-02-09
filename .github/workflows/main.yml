@@ -1,0 +1,91 @@
+name: CI/CD 工作流
+
+# 触发工作流的事件
+on:
+  push:
+    branches: [ "main" ]  # 推送到main分支时触发
+  pull_request:
+    branches: [ "main" ]  # main分支收到pull request时触发
+  workflow_dispatch:      # 允许手动触发工作流
+
+# 环境变量
+env:
+  NODE_VERSION: '16'     # Node.js版本
+
+# 工作流程中的任务
+jobs:
+  build-and-test:        # 构建和测试任务
+    runs-on: ubuntu-latest  # 在最新版Ubuntu上运行
+
+    steps:
+    # 检出代码
+    - name: 检出代码
+      uses: actions/checkout@v3
+
+    # 设置Node.js环境
+    - name: 设置 Node.js ${{ env.NODE_VERSION }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'     # 缓存npm依赖
+        cache-dependency-path: backend/package-lock.json
+
+    # 安装依赖
+    - name: 安装依赖
+      working-directory: backend
+      run: npm ci        # 使用clean install，确保依赖版本一致
+
+    # 运行代码检查
+    - name: 运行代码检查
+      working-directory: backend
+      run: |
+        npm install -g eslint
+        eslint . --ext .js
+
+    # 创建环境变量文件
+    - name: 创建环境变量文件
+      working-directory: backend
+      run: |
+        echo "API_KEY=${{ secrets.API_KEY }}" > .env
+
+    # 运行测试
+    - name: 运行测试
+      working-directory: backend
+      run: |
+        npm test
+      env:
+        API_KEY: ${{ secrets.API_KEY }}
+
+  deploy:                # 部署任务
+    needs: build-and-test  # 需要等待build-and-test任务完成
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' # 只在main分支上部署
+
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v3
+
+    # 这里可以添加您的部署步骤
+    - name: 部署应用
+      run: |
+        echo "开始部署应用..."
+        # 这里添加实际的部署命令
+      env:
+        API_KEY: ${{ secrets.API_KEY }}
+
+    - name: 部署通知
+      if: always()       # 无论成功失败都发送通知
+      run: |
+        echo "部署${{ job.status == 'success' && '成功' || '失败' }}!"
+
+# 工作流完成后的通知
+  notify:
+    needs: [deploy]      # 等待部署完成
+    runs-on: ubuntu-latest
+    if: always()         # 总是运行通知任务
+
+    steps:
+    - name: 发送工作流状态通知
+      run: |
+        echo "CI/CD 工作流程已完成"
+        echo "状态: ${{ job.status }}"

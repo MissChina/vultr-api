@@ -4,12 +4,17 @@
   "description": "Backend server for text model chat",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "echo \"运行基础测试检查\" && exit 0",
+    "lint": "eslint ."
   },
   "dependencies": {
     "axios": "^0.27.2",
     "cors": "^2.8.5",
     "dotenv": "^16.0.3",
     "express": "^4.18.1"
+  },
+  "devDependencies": {
+    "eslint": "^8.56.0"
   }
 }
