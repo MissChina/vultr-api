@@ -35,6 +35,11 @@ jobs:
       working-directory: backend
       run: npm ci
 
+    # 运行代码检查
+    - name: 运行代码检查
+      working-directory: backend
+      run: npm run lint
+
     # 创建环境变量文件
     - name: 创建环境变量文件
       working-directory: backend
