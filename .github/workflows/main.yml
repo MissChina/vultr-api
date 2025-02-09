@@ -10,12 +10,15 @@ on:
 
 # 环境变量
 env:
-  NODE_VERSION: '16'     # Node.js版本
+  NODE_VERSION: '18'     # 更新Node.js版本
 
 # 工作流程中的任务
 jobs:
   build-and-test:        # 构建和测试任务
     runs-on: ubuntu-latest  # 在最新版Ubuntu上运行
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x] # 更新为所需的版本
 
     steps:
     # 检出代码
@@ -23,10 +26,10 @@ jobs:
       uses: actions/checkout@v3
 
     # 设置Node.js环境
-    - name: 设置 Node.js ${{ env.NODE_VERSION }}
+    - name: 设置 Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v3
       with:
-        node-version: ${{ env.NODE_VERSION }}
+        node-version: ${{ matrix.node-version }}
         cache: 'npm'     # 缓存npm依赖
         cache-dependency-path: backend/package-lock.json
 
@@ -79,13 +82,13 @@ jobs:
         echo "部署${{ job.status == 'success' && '成功' || '失败' }}!"
 
 # 工作流完成后的通知
-  notify:
-    needs: [deploy]      # 等待部署完成
-    runs-on: ubuntu-latest
-    if: always()         # 总是运行通知任务
+notify:
+  needs: [deploy]      # 等待部署完成
+  runs-on: ubuntu-latest
+  if: always()         # 总是运行通知任务
 
-    steps:
-    - name: 发送工作流状态通知
-      run: |
-        echo "CI/CD 工作流程已完成"
-        echo "状态: ${{ job.status }}"
+  steps:
+  - name: 发送工作流状态通知
+    run: |
+      echo "CI/CD 工作流程已完成"
+      echo "状态: ${{ job.status }}"
