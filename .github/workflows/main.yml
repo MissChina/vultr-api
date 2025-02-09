@@ -78,7 +78,8 @@ jobs:
     - name: 部署到 Vercel
       env:
         VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      run: vercel --prod --token $VERCEL_TOKEN --yes
+        VERCEL_TELEMETRY_DISABLED: 1
+      run: vercel --yes --prod --token $VERCEL_TOKEN
 
     # 部署步骤
     - name: 部署应用
