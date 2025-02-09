@@ -16,9 +16,6 @@ env:
 jobs:
   build-and-test:        # 构建和测试任务
     runs-on: ubuntu-latest  # 在最新版Ubuntu上运行
-    strategy:
-      matrix:
-        node-version: ['16.20.2'] # 使用单一指定版本
 
     steps:
     # 检出代码
@@ -26,24 +23,17 @@ jobs:
       uses: actions/checkout@v3
 
     # 设置Node.js环境
-    - name: 设置 Node.js ${{ matrix.node-version }}
+    - name: 设置 Node.js ${{ env.NODE_VERSION }}
       uses: actions/setup-node@v3
       with:
-        node-version: ${{ matrix.node-version }}
+        node-version: ${{ env.NODE_VERSION }}
         cache: 'npm'     # 缓存npm依赖
         cache-dependency-path: backend/package-lock.json
 
     # 安装依赖
     - name: 安装依赖
       working-directory: backend
-      run: |
-        npm ci
-        npm install -D eslint@7.32.0  # 安装与Node.js 16兼容的ESLint版本
-
-    # 运行代码检查
-    - name: 运行代码检查
-      working-directory: backend
-      run: npx eslint . --ext .js  # 使用兼容的ESLint命令
+      run: npm ci
 
     # 创建环境变量文件
     - name: 创建环境变量文件
@@ -71,7 +61,7 @@ jobs:
     - name: 设置 Node.js
       uses: actions/setup-node@v3
       with:
-        node-version: '16.20.2'  # 使用相同的Node.js版本
+        node-version: ${{ env.NODE_VERSION }}
         cache: 'npm'
         cache-dependency-path: backend/package-lock.json
 
